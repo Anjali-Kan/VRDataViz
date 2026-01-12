@@ -11,6 +11,7 @@ public class VRUIPointer : MonoBehaviour
     
     private LineRenderer lineRenderer;
     private GameObject currentHovered;
+    private GameObject cursor;
     private bool triggerPressed = false;
     private bool triggerWasPressed = false;
     
@@ -23,12 +24,23 @@ public class VRUIPointer : MonoBehaviour
             lineRenderer = gameObject.AddComponent<LineRenderer>();
         }
         
-        lineRenderer.startWidth = 0.01f;
-        lineRenderer.endWidth = 0.005f;
+        lineRenderer.startWidth = 0.005f;
+        lineRenderer.endWidth = 0.002f;
         lineRenderer.positionCount = 2;
         lineRenderer.material = new Material(Shader.Find("Sprites/Default"));
         lineRenderer.startColor = Color.white;
         lineRenderer.endColor = Color.cyan;
+
+
+        // Create cursor sphere
+        cursor = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+        cursor.name = "RayCursor";
+        cursor.transform.localScale = Vector3.one * 0.01f;
+        Destroy(cursor.GetComponent<Collider>());
+
+        Renderer cursorRenderer = cursor.GetComponent<Renderer>();
+        cursorRenderer.material = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+        cursorRenderer.material.color = Color.yellow;
     }
     
     private void Update()
@@ -96,7 +108,11 @@ public class VRUIPointer : MonoBehaviour
                 
                 if (results.Count > 0)
                 {
-                    GameObject uiElement = results[0].gameObject;
+                    // Sort by depth - closest first
+                    results.Sort((a, b) => a.depth.CompareTo(b.depth));
+                    
+                    // Get the topmost UI element (last in sorted list = highest depth)
+                    GameObject uiElement = results[results.Count - 1].gameObject;
                     hitUI = true;
                     
                     // Handle hover
@@ -114,32 +130,84 @@ public class VRUIPointer : MonoBehaviour
                     
                     // Handle click
                     // Handle click
+// if (triggerPressed && !triggerWasPressed)
+// {
+//     Debug.Log("Click detected on: " + uiElement.name);
+    
+//     // Execute full click sequence
+//     ExecuteEvents.Execute(uiElement, pointerData, ExecuteEvents.pointerDownHandler);
+//     ExecuteEvents.Execute(uiElement, pointerData, ExecuteEvents.pointerUpHandler);
+//     ExecuteEvents.Execute(uiElement, pointerData, ExecuteEvents.pointerClickHandler);
+    
+//     // Check for Toggle first (dropdown options are toggles)
+//     Toggle toggle = uiElement.GetComponent<Toggle>();
+//     if (toggle == null) toggle = uiElement.GetComponentInParent<Toggle>();
+    
+//     if (toggle != null)
+//     {
+//         toggle.isOn = true;
+//         Debug.Log("Selected option: " + toggle.name);
+//         return;
+//     }
+    
+//     // Then check for other selectables
+//     Selectable selectable = uiElement.GetComponent<Selectable>();
+//     if (selectable == null) selectable = uiElement.GetComponentInParent<Selectable>();
+    
+//     if (selectable != null)
+//     {
+//         selectable.Select();
+        
+//         // Special handling for TMP_Dropdown
+//         TMPro.TMP_Dropdown dropdown = selectable as TMPro.TMP_Dropdown;
+//         if (dropdown != null)
+//         {
+//             dropdown.Show();
+//             Debug.Log("Opening dropdown: " + dropdown.name);
+//         }
+        
+//         Debug.Log("Clicked selectable: " + selectable.gameObject.name);
+//     }
+// }
+// Handle click
 if (triggerPressed && !triggerWasPressed)
 {
     Debug.Log("Click detected on: " + uiElement.name);
     
-    // Execute pointer down, then up, then click (full click sequence)
+    // Find the button component
+    Button button = uiElement.GetComponent<Button>();
+    if (button == null) button = uiElement.GetComponentInParent<Button>();
+    
+    if (button != null)
+    {
+        button.onClick.Invoke();
+        Debug.Log("Button clicked: " + button.name);
+        return;
+    }
+    
+    // Check for Toggle (dropdown options)
+    Toggle toggle = uiElement.GetComponent<Toggle>();
+    if (toggle == null) toggle = uiElement.GetComponentInParent<Toggle>();
+    
+    if (toggle != null)
+    {
+        toggle.isOn = !toggle.isOn;
+        Debug.Log("Toggle clicked: " + toggle.name);
+        return;
+    }
+    
+    // Fallback: execute pointer events
     ExecuteEvents.Execute(uiElement, pointerData, ExecuteEvents.pointerDownHandler);
     ExecuteEvents.Execute(uiElement, pointerData, ExecuteEvents.pointerUpHandler);
     ExecuteEvents.Execute(uiElement, pointerData, ExecuteEvents.pointerClickHandler);
     
-    // Try to find and interact with selectable
     Selectable selectable = uiElement.GetComponent<Selectable>();
     if (selectable == null) selectable = uiElement.GetComponentInParent<Selectable>();
     
     if (selectable != null)
     {
         selectable.Select();
-        
-        // Special handling for TMP_Dropdown
-        TMPro.TMP_Dropdown dropdown = selectable as TMPro.TMP_Dropdown;
-        if (dropdown != null)
-        {
-            dropdown.Show();
-            Debug.Log("Opening dropdown: " + dropdown.name);
-        }
-        
-        Debug.Log("Clicked selectable: " + selectable.gameObject.name);
+        Debug.Log("Selectable clicked: " + selectable.name);
     }
 }
                 }
@@ -154,21 +222,39 @@ if (triggerPressed && !triggerWasPressed)
     }
     
     private void UpdateLine()
+{
+    if (lineRenderer == null) return;
+    
+    lineRenderer.SetPosition(0, transform.position);
+    lineRenderer.SetPosition(1, transform.position + transform.forward * rayLength);
+    
+    // Position cursor at ray end or hit point
+    Ray ray = new Ray(transform.position, transform.forward);
+    RaycastHit hit;
+    
+    if (Physics.Raycast(ray, out hit, rayLength))
     {
-        if (lineRenderer == null) return;
-        
-        lineRenderer.SetPosition(0, transform.position);
-        lineRenderer.SetPosition(1, transform.position + transform.forward * rayLength);
-        
-        if (currentHovered != null)
-        {
-            lineRenderer.startColor = Color.green;
-            lineRenderer.endColor = Color.green;
-        }
-        else
-        {
-            lineRenderer.startColor = Color.white;
-            lineRenderer.endColor = Color.cyan;
-        }
+        cursor.transform.position = hit.point;
+        cursor.SetActive(true);
     }
+    else
+    {
+        cursor.transform.position = transform.position + transform.forward * rayLength;
+        cursor.SetActive(true);
+    }
+    
+    // Color feedback
+    if (currentHovered != null)
+    {
+        lineRenderer.startColor = Color.green;
+        lineRenderer.endColor = Color.green;
+        cursor.GetComponent<Renderer>().material.color = Color.green;
+    }
+    else
+    {
+        lineRenderer.startColor = Color.white;
+        lineRenderer.endColor = Color.cyan;
+        cursor.GetComponent<Renderer>().material.color = Color.yellow;
+    }
+}
 }

@@ -1,8 +1,8 @@
 using UnityEngine;
 using UnityEngine.UI;
-using UnityEngine.XR.Interaction.Toolkit.UI;
 using TMPro;
 using System.Collections.Generic;
+using UnityEngine.XR.Interaction.Toolkit.UI;
 
 public class AxisMappingUI : MonoBehaviour
 {
@@ -13,20 +13,28 @@ public class AxisMappingUI : MonoBehaviour
     [SerializeField] private Vector3 panelPosition = new Vector3(-2f, 1.5f, 2f);
     [SerializeField] private Vector3 panelRotation = new Vector3(0f, 45f, 0f);
     
-    private TMP_Dropdown xAxisDropdown;
-    private TMP_Dropdown yAxisDropdown;
-    private TMP_Dropdown zAxisDropdown;
-    private TMP_Dropdown colorDropdown;
-    
     private DataSet dataSet;
     private List<int> numericIndices = new List<int>();
-    private bool isInitialized = false;
+    
+    private int xSelection = 0;
+    private int ySelection = 1;
+    private int zSelection = 2;
+    private int colorSelection = 0;
+    
+    private TextMeshProUGUI xLabel;
+    private TextMeshProUGUI yLabel;
+    private TextMeshProUGUI zLabel;
+    private TextMeshProUGUI colorLabel;
+    
+    private List<string> numericNames = new List<string>();
+    private List<string> allNames = new List<string>();
     
     private void Start()
     {
         CreateUI();
         
         DataManager.Instance.OnDataLoaded += OnDataLoaded;
+        
         if (DataManager.Instance.IsDataLoaded)
         {
             OnDataLoaded();
@@ -49,29 +57,31 @@ public class AxisMappingUI : MonoBehaviour
         canvas.renderMode = RenderMode.WorldSpace;
         canvasObj.AddComponent<CanvasScaler>();
         canvasObj.AddComponent<TrackedDeviceGraphicRaycaster>();
-        // BoxCollider canvasCollider = canvasObj.AddComponent<BoxCollider>();
-        // canvasCollider.size = new Vector3(400, 350, 1);
-
-
+        
         RectTransform canvasRect = canvasObj.GetComponent<RectTransform>();
-        canvasRect.sizeDelta = new Vector2(400, 350);
+        canvasRect.sizeDelta = new Vector2(500, 400);
         canvasRect.position = panelPosition;
         canvasRect.eulerAngles = panelRotation;
         canvasRect.localScale = Vector3.one * 0.005f;
-        BoxCollider canvasCollider = canvasObj.AddComponent<BoxCollider>();
-        canvasCollider.size = new Vector3(400, 350, 1);
+        
+        // Add collider for raycast
+        BoxCollider collider = canvasObj.AddComponent<BoxCollider>();
+        collider.size = new Vector3(500, 400, 10);
         
         // Create Panel
         GameObject panelObj = CreatePanel(canvasObj.transform);
         
         // Create Title
-        CreateLabel(panelObj.transform, "Axis Mapping", new Vector2(0, 130), 28);
+        CreateTitle(panelObj.transform, "Axis Mapping", new Vector2(0, 160));
         
-        // Create Dropdowns with Labels
-        xAxisDropdown = CreateDropdownWithLabel(panelObj.transform, "X Axis:", new Vector2(0, 70));
-        yAxisDropdown = CreateDropdownWithLabel(panelObj.transform, "Y Axis:", new Vector2(0, 20));
-        zAxisDropdown = CreateDropdownWithLabel(panelObj.transform, "Z Axis:", new Vector2(0, -30));
-        colorDropdown = CreateDropdownWithLabel(panelObj.transform, "Color:", new Vector2(0, -80));
+        // Create axis rows
+        xLabel = CreateAxisRow(panelObj.transform, "X Axis:", new Vector2(0, 100), OnXPrev, OnXNext);
+        yLabel = CreateAxisRow(panelObj.transform, "Y Axis:", new Vector2(0, 40), OnYPrev, OnYNext);
+        zLabel = CreateAxisRow(panelObj.transform, "Z Axis:", new Vector2(0, -20), OnZPrev, OnZNext);
+        colorLabel = CreateAxisRow(panelObj.transform, "Color:", new Vector2(0, -80), OnColorPrev, OnColorNext);
+        
+        // Create Apply button
+        CreateButton(panelObj.transform, "Apply", new Vector2(0, -150), OnApply);
     }
     
     private GameObject CreatePanel(Transform parent)
@@ -80,7 +90,7 @@ public class AxisMappingUI : MonoBehaviour
         panel.transform.SetParent(parent, false);
         
         Image image = panel.AddComponent<Image>();
-        image.color = new Color(0.1f, 0.1f, 0.1f, 0.9f);
+        image.color = new Color(0.1f, 0.1f, 0.1f, 0.95f);
         
         RectTransform rect = panel.GetComponent<RectTransform>();
         rect.anchorMin = Vector2.zero;
@@ -91,211 +101,206 @@ public class AxisMappingUI : MonoBehaviour
         return panel;
     }
     
-    private TextMeshProUGUI CreateLabel(Transform parent, string text, Vector2 position, int fontSize = 20)
+    private void CreateTitle(Transform parent, string text, Vector2 position)
     {
-        GameObject labelObj = new GameObject("Label_" + text);
-        labelObj.transform.SetParent(parent, false);
+        GameObject titleObj = new GameObject("Title");
+        titleObj.transform.SetParent(parent, false);
         
-        TextMeshProUGUI tmp = labelObj.AddComponent<TextMeshProUGUI>();
+        TextMeshProUGUI tmp = titleObj.AddComponent<TextMeshProUGUI>();
         tmp.text = text;
-        tmp.fontSize = fontSize;
+        tmp.fontSize = 36;
         tmp.alignment = TextAlignmentOptions.Center;
         tmp.color = Color.white;
+        tmp.fontStyle = FontStyles.Bold;
         
-        RectTransform rect = labelObj.GetComponent<RectTransform>();
-        rect.sizeDelta = new Vector2(380, 30);
+        RectTransform rect = titleObj.GetComponent<RectTransform>();
+        rect.sizeDelta = new Vector2(400, 50);
         rect.anchoredPosition = position;
-        
-        return tmp;
     }
     
-    private TMP_Dropdown CreateDropdownWithLabel(Transform parent, string labelText, Vector2 position)
+    private TextMeshProUGUI CreateAxisRow(Transform parent, string labelText, Vector2 position, UnityEngine.Events.UnityAction onPrev, UnityEngine.Events.UnityAction onNext)
     {
-        // Label
-        GameObject labelObj = new GameObject("Label_" + labelText);
-        labelObj.transform.SetParent(parent, false);
+        // Container
+        GameObject row = new GameObject("Row_" + labelText);
+        row.transform.SetParent(parent, false);
+        
+        RectTransform rowRect = row.AddComponent<RectTransform>();
+        rowRect.sizeDelta = new Vector2(450, 50);
+        rowRect.anchoredPosition = position;
+        
+        // Label (left side)
+        GameObject labelObj = new GameObject("Label");
+        labelObj.transform.SetParent(row.transform, false);
         
         TextMeshProUGUI label = labelObj.AddComponent<TextMeshProUGUI>();
         label.text = labelText;
-        label.fontSize = 18;
+        label.fontSize = 24;
         label.alignment = TextAlignmentOptions.Left;
         label.color = Color.white;
         
         RectTransform labelRect = labelObj.GetComponent<RectTransform>();
-        labelRect.sizeDelta = new Vector2(80, 30);
-        labelRect.anchoredPosition = position + new Vector2(-140, 0);
+        labelRect.sizeDelta = new Vector2(100, 50);
+        labelRect.anchoredPosition = new Vector2(-175, 0);
         
-        // Dropdown
-        GameObject dropdownObj = new GameObject("Dropdown_" + labelText);
-        dropdownObj.transform.SetParent(parent, false);
+        // Prev button
+        CreateSmallButton(row.transform, "<", new Vector2(-60, 0), onPrev);
         
-        Image dropdownImage = dropdownObj.AddComponent<Image>();
-        dropdownImage.color = new Color(0.2f, 0.2f, 0.2f, 1f);
+        // Value display (center)
+        GameObject valueObj = new GameObject("Value");
+        valueObj.transform.SetParent(row.transform, false);
         
-        TMP_Dropdown dropdown = dropdownObj.AddComponent<TMP_Dropdown>();
+        TextMeshProUGUI valueText = valueObj.AddComponent<TextMeshProUGUI>();
+        valueText.text = "---";
+        valueText.fontSize = 22;
+        valueText.alignment = TextAlignmentOptions.Center;
+        valueText.color = Color.cyan;
         
-        RectTransform dropdownRect = dropdownObj.GetComponent<RectTransform>();
-        dropdownRect.sizeDelta = new Vector2(200, 30);
-        dropdownRect.anchoredPosition = position + new Vector2(50, 0);
+        RectTransform valueRect = valueObj.GetComponent<RectTransform>();
+        valueRect.sizeDelta = new Vector2(150, 50);
+        valueRect.anchoredPosition = new Vector2(50, 0);
         
-        // Dropdown Label (selected value)
-        GameObject captionObj = new GameObject("Caption");
-        captionObj.transform.SetParent(dropdownObj.transform, false);
+        // Next button
+        CreateSmallButton(row.transform, ">", new Vector2(160, 0), onNext);
         
-        TextMeshProUGUI captionText = captionObj.AddComponent<TextMeshProUGUI>();
-        captionText.fontSize = 16;
-        captionText.alignment = TextAlignmentOptions.Left;
-        captionText.color = Color.white;
+        return valueText;
+    }
+    
+    private void CreateSmallButton(Transform parent, string text, Vector2 position, UnityEngine.Events.UnityAction onClick)
+    {
+        GameObject btnObj = new GameObject("Btn_" + text);
+        btnObj.transform.SetParent(parent, false);
         
-        RectTransform captionRect = captionObj.GetComponent<RectTransform>();
-        captionRect.anchorMin = Vector2.zero;
-        captionRect.anchorMax = Vector2.one;
-        captionRect.offsetMin = new Vector2(10, 0);
-        captionRect.offsetMax = new Vector2(-10, 0);
+        Image btnImage = btnObj.AddComponent<Image>();
+        btnImage.color = new Color(0.3f, 0.3f, 0.3f, 1f);
         
-        dropdown.captionText = captionText;
+        Button btn = btnObj.AddComponent<Button>();
+        btn.targetGraphic = btnImage;
+        btn.onClick.AddListener(onClick);
         
-        // Template (dropdown list)
-        GameObject templateObj = new GameObject("Template");
-        templateObj.transform.SetParent(dropdownObj.transform, false);
-        templateObj.SetActive(false);
+        // Button colors
+        ColorBlock colors = btn.colors;
+        colors.normalColor = new Color(0.3f, 0.3f, 0.3f, 1f);
+        colors.highlightedColor = new Color(0.5f, 0.5f, 0.5f, 1f);
+        colors.pressedColor = new Color(0.2f, 0.6f, 0.2f, 1f);
+        btn.colors = colors;
         
-        Image templateImage = templateObj.AddComponent<Image>();
-        templateImage.color = new Color(0.15f, 0.15f, 0.15f, 1f);
+        RectTransform btnRect = btnObj.GetComponent<RectTransform>();
+        btnRect.sizeDelta = new Vector2(50, 40);
+        btnRect.anchoredPosition = position;
         
-        RectTransform templateRect = templateObj.GetComponent<RectTransform>();
-        templateRect.anchorMin = new Vector2(0, 0);
-        templateRect.anchorMax = new Vector2(1, 0);
-        templateRect.pivot = new Vector2(0.5f, 1f);
-        templateRect.sizeDelta = new Vector2(0, 150);
-        templateRect.anchoredPosition = Vector2.zero;
+        // Button text
+        GameObject textObj = new GameObject("Text");
+        textObj.transform.SetParent(btnObj.transform, false);
         
-        ScrollRect scrollRect = templateObj.AddComponent<ScrollRect>();
+        TextMeshProUGUI btnText = textObj.AddComponent<TextMeshProUGUI>();
+        btnText.text = text;
+        btnText.fontSize = 28;
+        btnText.alignment = TextAlignmentOptions.Center;
+        btnText.color = Color.white;
         
-        // Viewport
-        GameObject viewportObj = new GameObject("Viewport");
-        viewportObj.transform.SetParent(templateObj.transform, false);
+        RectTransform textRect = textObj.GetComponent<RectTransform>();
+        textRect.anchorMin = Vector2.zero;
+        textRect.anchorMax = Vector2.one;
+        textRect.offsetMin = Vector2.zero;
+        textRect.offsetMax = Vector2.zero;
+    }
+    
+    private void CreateButton(Transform parent, string text, Vector2 position, UnityEngine.Events.UnityAction onClick)
+    {
+        GameObject btnObj = new GameObject("Btn_" + text);
+        btnObj.transform.SetParent(parent, false);
         
-        Image viewportImage = viewportObj.AddComponent<Image>();
-        viewportImage.color = Color.white;
-        viewportObj.AddComponent<Mask>().showMaskGraphic = false;
+        Image btnImage = btnObj.AddComponent<Image>();
+        btnImage.color = new Color(0.2f, 0.5f, 0.2f, 1f);
         
-        RectTransform viewportRect = viewportObj.GetComponent<RectTransform>();
-        viewportRect.anchorMin = Vector2.zero;
-        viewportRect.anchorMax = Vector2.one;
-        viewportRect.offsetMin = Vector2.zero;
-        viewportRect.offsetMax = Vector2.zero;
+        Button btn = btnObj.AddComponent<Button>();
+        btn.targetGraphic = btnImage;
+        btn.onClick.AddListener(onClick);
         
-        // Content
-        GameObject contentObj = new GameObject("Content");
-        contentObj.transform.SetParent(viewportObj.transform, false);
+        ColorBlock colors = btn.colors;
+        colors.normalColor = new Color(0.2f, 0.5f, 0.2f, 1f);
+        colors.highlightedColor = new Color(0.3f, 0.7f, 0.3f, 1f);
+        colors.pressedColor = new Color(0.1f, 0.8f, 0.1f, 1f);
+        btn.colors = colors;
         
-        RectTransform contentRect = contentObj.AddComponent<RectTransform>();
-        contentRect.anchorMin = new Vector2(0, 1);
-        contentRect.anchorMax = new Vector2(1, 1);
-        contentRect.pivot = new Vector2(0.5f, 1f);
-        contentRect.sizeDelta = new Vector2(0, 30);
-        contentRect.anchoredPosition = Vector2.zero;
+        RectTransform btnRect = btnObj.GetComponent<RectTransform>();
+        btnRect.sizeDelta = new Vector2(150, 50);
+        btnRect.anchoredPosition = position;
         
-        // Item Template
-        GameObject itemObj = new GameObject("Item");
-        itemObj.transform.SetParent(contentObj.transform, false);
+        GameObject textObj = new GameObject("Text");
+        textObj.transform.SetParent(btnObj.transform, false);
         
-        Image itemImage = itemObj.AddComponent<Image>();
-        itemImage.color = new Color(0.25f, 0.25f, 0.25f, 1f);
+        TextMeshProUGUI btnText = textObj.AddComponent<TextMeshProUGUI>();
+        btnText.text = text;
+        btnText.fontSize = 26;
+        btnText.alignment = TextAlignmentOptions.Center;
+        btnText.color = Color.white;
         
-        Toggle itemToggle = itemObj.AddComponent<Toggle>();
-        
-        RectTransform itemRect = itemObj.GetComponent<RectTransform>();
-        itemRect.anchorMin = new Vector2(0, 0.5f);
-        itemRect.anchorMax = new Vector2(1, 0.5f);
-        itemRect.sizeDelta = new Vector2(0, 30);
-        
-        // Item Label
-        GameObject itemLabelObj = new GameObject("Item Label");
-        itemLabelObj.transform.SetParent(itemObj.transform, false);
-        
-        TextMeshProUGUI itemLabel = itemLabelObj.AddComponent<TextMeshProUGUI>();
-        itemLabel.fontSize = 16;
-        itemLabel.alignment = TextAlignmentOptions.Left;
-        itemLabel.color = Color.white;
-        
-        RectTransform itemLabelRect = itemLabelObj.GetComponent<RectTransform>();
-        itemLabelRect.anchorMin = Vector2.zero;
-        itemLabelRect.anchorMax = Vector2.one;
-        itemLabelRect.offsetMin = new Vector2(10, 0);
-        itemLabelRect.offsetMax = new Vector2(-10, 0);
-        
-        // Connect everything
-        dropdown.template = templateRect;
-        dropdown.itemText = itemLabel;
-        itemToggle.targetGraphic = itemImage;
-        scrollRect.viewport = viewportRect;
-        scrollRect.content = contentRect;
-        
-        return dropdown;
+        RectTransform textRect = textObj.GetComponent<RectTransform>();
+        textRect.anchorMin = Vector2.zero;
+        textRect.anchorMax = Vector2.one;
+        textRect.offsetMin = Vector2.zero;
+        textRect.offsetMax = Vector2.zero;
     }
     
     private void OnDataLoaded()
     {
         dataSet = DataManager.Instance.CurrentDataSet;
-        PopulateDropdowns();
-    }
-    
-    private void PopulateDropdowns()
-    {
-        if (dataSet == null) return;
         
-        List<string> numericColumns = new List<string>();
-        List<string> allColumns = new List<string>();
         numericIndices.Clear();
+        numericNames.Clear();
+        allNames.Clear();
         
         for (int i = 0; i < dataSet.Columns.Count; i++)
         {
             ColumnInfo col = dataSet.Columns[i];
-            allColumns.Add(col.Name);
+            allNames.Add(col.Name);
             
             if (col.IsNumeric)
             {
-                numericColumns.Add(col.Name);
+                numericNames.Add(col.Name);
                 numericIndices.Add(i);
             }
         }
         
-        // Populate dropdowns
-        SetupDropdown(xAxisDropdown, numericColumns, 0);
-        SetupDropdown(yAxisDropdown, numericColumns, Mathf.Min(1, numericColumns.Count - 1));
-        SetupDropdown(zAxisDropdown, numericColumns, Mathf.Min(2, numericColumns.Count - 1));
-        SetupDropdown(colorDropdown, allColumns, allColumns.Count - 1);
+        // Set defaults
+        xSelection = 0;
+        ySelection = Mathf.Min(1, numericNames.Count - 1);
+        zSelection = Mathf.Min(2, numericNames.Count - 1);
+        colorSelection = allNames.Count - 1;
         
-        // Add listeners
-        xAxisDropdown.onValueChanged.AddListener(OnAxisChanged);
-        yAxisDropdown.onValueChanged.AddListener(OnAxisChanged);
-        zAxisDropdown.onValueChanged.AddListener(OnAxisChanged);
-        colorDropdown.onValueChanged.AddListener(OnColorChanged);
+        UpdateLabels();
+        ApplyMapping();
+    }
+    
+    private void UpdateLabels()
+    {
+        if (numericNames.Count > 0)
+        {
+            xLabel.text = numericNames[xSelection];
+            yLabel.text = numericNames[ySelection];
+            zLabel.text = numericNames[zSelection];
+        }
         
-        isInitialized = true;
-        ApplyMapping();
+        if (allNames.Count > 0)
+        {
+            colorLabel.text = allNames[colorSelection];
+        }
     }
     
-    private void SetupDropdown(TMP_Dropdown dropdown, List<string> options, int defaultIndex)
-    {
-        dropdown.ClearOptions();
-        dropdown.AddOptions(options);
-        dropdown.value = defaultIndex;
-        dropdown.RefreshShownValue();
-    }
+    private void OnXPrev() { xSelection = (xSelection - 1 + numericNames.Count) % numericNames.Count; UpdateLabels(); }
+    private void OnXNext() { xSelection = (xSelection + 1) % numericNames.Count; UpdateLabels(); }
+    private void OnYPrev() { ySelection = (ySelection - 1 + numericNames.Count) % numericNames.Count; UpdateLabels(); }
+    private void OnYNext() { ySelection = (ySelection + 1) % numericNames.Count; UpdateLabels(); }
+    private void OnZPrev() { zSelection = (zSelection - 1 + numericNames.Count) % numericNames.Count; UpdateLabels(); }
+    private void OnZNext() { zSelection = (zSelection + 1) % numericNames.Count; UpdateLabels(); }
+    private void OnColorPrev() { colorSelection = (colorSelection - 1 + allNames.Count) % allNames.Count; UpdateLabels(); }
+    private void OnColorNext() { colorSelection = (colorSelection + 1) % allNames.Count; UpdateLabels(); }
     
-    private void OnAxisChanged(int value)
+    private void OnApply()
     {
-        if (!isInitialized) return;
         ApplyMapping();
-    }
-    
-    private void OnColorChanged(int value)
-    {
-        if (!isInitialized) return;
-        ApplyMapping();
+        Debug.Log("Applied mapping!");
     }
     
     private void ApplyMapping()
@@ -307,14 +312,13 @@ public class AxisMappingUI : MonoBehaviour
         
         if (pointCloudRenderer == null || numericIndices.Count == 0) return;
         
-        int xIndex = numericIndices[xAxisDropdown.value];
-        int yIndex = numericIndices[yAxisDropdown.value];
-        int zIndex = numericIndices[zAxisDropdown.value];
-        int colorIndex = colorDropdown.value;
+        int xIndex = numericIndices[xSelection];
+        int yIndex = numericIndices[ySelection];
+        int zIndex = numericIndices[zSelection];
         
         pointCloudRenderer.SetAxisMapping(xIndex, yIndex, zIndex);
-        pointCloudRenderer.SetColorColumn(colorIndex);
+        pointCloudRenderer.SetColorColumn(colorSelection);
         
-        Debug.Log($"Mapping: X={dataSet.Columns[xIndex].Name}, Y={dataSet.Columns[yIndex].Name}, Z={dataSet.Columns[zIndex].Name}, Color={dataSet.Columns[colorIndex].Name}");
+        Debug.Log($"Mapping: X={numericNames[xSelection]}, Y={numericNames[ySelection]}, Z={numericNames[zSelection]}, Color={allNames[colorSelection]}");
     }
 }

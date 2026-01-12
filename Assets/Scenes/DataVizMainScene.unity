@@ -2415,9 +2415,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e6fbd56e70f9ece4695c669714cd19db, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::VRUIPointer
-  controllerNode: 5
   rayLength: 10
-  lineRenderer: {fileID: 0}
 --- !u!1 &1436958398
 GameObject:
   m_ObjectHideFlags: 0
