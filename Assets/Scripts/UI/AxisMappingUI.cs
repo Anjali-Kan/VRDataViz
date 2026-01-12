@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.XR.Interaction.Toolkit.UI;
 using TMPro;
 using System.Collections.Generic;
 
@@ -47,13 +48,18 @@ public class AxisMappingUI : MonoBehaviour
         Canvas canvas = canvasObj.AddComponent<Canvas>();
         canvas.renderMode = RenderMode.WorldSpace;
         canvasObj.AddComponent<CanvasScaler>();
-        canvasObj.AddComponent<GraphicRaycaster>();
-        
+        canvasObj.AddComponent<TrackedDeviceGraphicRaycaster>();
+        // BoxCollider canvasCollider = canvasObj.AddComponent<BoxCollider>();
+        // canvasCollider.size = new Vector3(400, 350, 1);
+
+
         RectTransform canvasRect = canvasObj.GetComponent<RectTransform>();
         canvasRect.sizeDelta = new Vector2(400, 350);
         canvasRect.position = panelPosition;
         canvasRect.eulerAngles = panelRotation;
         canvasRect.localScale = Vector3.one * 0.005f;
+        BoxCollider canvasCollider = canvasObj.AddComponent<BoxCollider>();
+        canvasCollider.size = new Vector3(400, 350, 1);
         
         // Create Panel
         GameObject panelObj = CreatePanel(canvasObj.transform);
@@ -296,7 +302,7 @@ public class AxisMappingUI : MonoBehaviour
     {
         if (pointCloudRenderer == null)
         {
-            pointCloudRenderer = FindObjectOfType<PointCloudRenderer>();
+            pointCloudRenderer = FindFirstObjectByType<PointCloudRenderer>();
         }
         
         if (pointCloudRenderer == null || numericIndices.Count == 0) return;
