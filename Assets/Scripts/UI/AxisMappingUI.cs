@@ -59,14 +59,14 @@ public class AxisMappingUI : MonoBehaviour
         canvasObj.AddComponent<TrackedDeviceGraphicRaycaster>();
         
         RectTransform canvasRect = canvasObj.GetComponent<RectTransform>();
-        canvasRect.sizeDelta = new Vector2(500, 400);
+        canvasRect.sizeDelta = new Vector2(500, 480);
         canvasRect.position = panelPosition;
         canvasRect.eulerAngles = panelRotation;
         canvasRect.localScale = Vector3.one * 0.005f;
         
         // Add collider for raycast
         BoxCollider collider = canvasObj.AddComponent<BoxCollider>();
-        collider.size = new Vector3(500, 400, 10);
+        collider.size = new Vector3(500, 480, 10);
         
         // Create Panel
         GameObject panelObj = CreatePanel(canvasObj.transform);
@@ -82,6 +82,8 @@ public class AxisMappingUI : MonoBehaviour
         
         // Create Apply button
         CreateButton(panelObj.transform, "Apply", new Vector2(0, -150), OnApply);
+        // Create Reset button
+        CreateButton(panelObj.transform, "Reset View", new Vector2(0, -210), OnResetView);
     }
     
     private GameObject CreatePanel(Transform parent)
@@ -321,4 +323,14 @@ public class AxisMappingUI : MonoBehaviour
         
         Debug.Log($"Mapping: X={numericNames[xSelection]}, Y={numericNames[ySelection]}, Z={numericNames[zSelection]}, Color={allNames[colorSelection]}");
     }
+
+    private void OnResetView()
+{
+    VisualizationGrabber grabber = FindFirstObjectByType<VisualizationGrabber>();
+    if (grabber != null)
+    {
+        grabber.ResetPosition();
+    }
+    Debug.Log("View reset!");
+}
 }

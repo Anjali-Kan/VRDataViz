@@ -85,6 +85,7 @@ public class CoordinateSystem : MonoBehaviour
         
         LineRenderer lr = axis.AddComponent<LineRenderer>();
         lr.positionCount = 2;
+        lr.useWorldSpace = false;
         lr.SetPosition(0, direction * -length);  // Negative direction
         lr.SetPosition(1, direction * length);   // Positive direction
         
@@ -104,8 +105,10 @@ public class CoordinateSystem : MonoBehaviour
         GameObject gridLine = new GameObject(name);
         gridLine.transform.SetParent(transform);
 
+
         LineRenderer lineRenderer = gridLine.AddComponent<LineRenderer>();
         lineRenderer.positionCount = 2;
+        lineRenderer.useWorldSpace = false;
         lineRenderer.SetPosition(0, start);
         lineRenderer.SetPosition(1, end);
         lineRenderer.startWidth = gridLineThickness;

@@ -109,8 +109,7 @@ public class PointCloudRenderer : MonoBehaviour
             
             point.transform.localScale = Vector3.one * pointSize;
             
-            // Remove collider for performance
-            Destroy(point.GetComponent<Collider>());
+            
             
             // Set color
             Renderer renderer = point.GetComponent<Renderer>();
