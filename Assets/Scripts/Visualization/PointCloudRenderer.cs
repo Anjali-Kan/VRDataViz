@@ -1,6 +1,7 @@
 using UnityEngine;
 using System.Collections.Generic;
 
+
 public class PointCloudRenderer : MonoBehaviour
 {
     [Header("Settings")]
@@ -163,4 +164,46 @@ public class PointCloudRenderer : MonoBehaviour
         colorColumnIndex = columnIndex;
         GeneratePoints();
     }
+
+    public void ApplyFilters(Dictionary<int, float> minFilters, Dictionary<int, float> maxFilters)
+{
+    if (dataSet == null) return;
+    
+    for (int i = 0; i < pointObjects.Count; i++)
+    {
+        bool visible = true;
+        
+        foreach (var filter in minFilters)
+        {
+            int colIndex = filter.Key;
+            float minVal = filter.Value;
+            float maxVal = maxFilters[colIndex];
+            
+            if (dataSet.Columns[colIndex].IsNumeric)
+            {
+                float value = float.Parse(dataSet.Parser.Rows[i][colIndex]);
+                
+                if (value < minVal || value > maxVal)
+                {
+                    visible = false;
+                    break;
+                }
+            }
+        }
+        
+        pointObjects[i].SetActive(visible);
+    }
+    
+    Debug.Log("Filters applied to points");
+}
+
+public void ClearFilters()
+{
+    foreach (var point in pointObjects)
+    {
+        point.SetActive(true);
+    }
+    
+    Debug.Log("Filters cleared");
+}
 }
