@@ -59,20 +59,20 @@ public class AxisMappingUI : MonoBehaviour
         canvasObj.AddComponent<TrackedDeviceGraphicRaycaster>();
         
         RectTransform canvasRect = canvasObj.GetComponent<RectTransform>();
-        canvasRect.sizeDelta = new Vector2(500, 480);
+        canvasRect.sizeDelta = new Vector2(500, 750);
         canvasRect.position = panelPosition;
         canvasRect.eulerAngles = panelRotation;
         canvasRect.localScale = Vector3.one * 0.005f;
         
         // Add collider for raycast
         BoxCollider collider = canvasObj.AddComponent<BoxCollider>();
-        collider.size = new Vector3(500, 480, 10);
+        collider.size = new Vector3(500, 750, 10);
         
         // Create Panel
         GameObject panelObj = CreatePanel(canvasObj.transform);
         
         // Create Title
-        CreateTitle(panelObj.transform, "Axis Mapping", new Vector2(0, 160));
+        CreateTitle(panelObj.transform, "Axis Mapping", new Vector2(0, 260));
         
         // Create axis rows
         xLabel = CreateAxisRow(panelObj.transform, "X Axis:", new Vector2(0, 100), OnXPrev, OnXNext);
@@ -80,10 +80,18 @@ public class AxisMappingUI : MonoBehaviour
         zLabel = CreateAxisRow(panelObj.transform, "Z Axis:", new Vector2(0, -20), OnZPrev, OnZNext);
         colorLabel = CreateAxisRow(panelObj.transform, "Color:", new Vector2(0, -80), OnColorPrev, OnColorNext);
         
+        
         // Create Apply button
-        CreateButton(panelObj.transform, "Apply", new Vector2(0, -150), OnApply);
+        CreateButton(panelObj.transform, "Apply", new Vector2(0, -140), OnApply);
+
         // Create Reset button
-        CreateButton(panelObj.transform, "Reset View", new Vector2(0, -210), OnResetView);
+        CreateButton(panelObj.transform, "Reset View", new Vector2(0, -195), OnResetView);
+
+        // Create Clear Drawings button
+        CreateButton(panelObj.transform, "Clear Drawings", new Vector2(0, -250), OnClearDrawings);
+
+        // Create Undo Drawing button
+        CreateButton(panelObj.transform, "Undo Drawing", new Vector2(0, -305), OnUndoDrawing);
     }
     
     private GameObject CreatePanel(Transform parent)
@@ -332,5 +340,25 @@ public class AxisMappingUI : MonoBehaviour
         grabber.ResetPosition();
     }
     Debug.Log("View reset!");
+}
+
+private void OnClearDrawings()
+{
+    VRDrawing drawing = FindFirstObjectByType<VRDrawing>();
+    if (drawing != null)
+    {
+        drawing.ClearAllDrawings();
+    }
+    Debug.Log("Drawings cleared!");
+}
+
+private void OnUndoDrawing()
+{
+    VRDrawing drawing = FindFirstObjectByType<VRDrawing>();
+    if (drawing != null)
+    {
+        drawing.UndoLastDrawing();
+    }
+    Debug.Log("Undo last drawing!");
 }
 }
