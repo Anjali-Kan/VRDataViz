@@ -1,5 +1,30 @@
 using UnityEngine;
 using System.IO;
+using System.Collections.Generic;
+
+[System.Serializable]
+public class SerializableVector3
+{
+    public float x, y, z;
+    
+    public SerializableVector3(Vector3 v)
+    {
+        x = v.x;
+        y = v.y;
+        z = v.z;
+    }
+    
+    public Vector3 ToVector3()
+    {
+        return new Vector3(x, y, z);
+    }
+}
+
+[System.Serializable]
+public class DrawingData
+{
+    public List<SerializableVector3> points = new List<SerializableVector3>();
+}
 
 [System.Serializable]
 public class ViewState
@@ -10,6 +35,7 @@ public class ViewState
     public int yColumn;
     public int zColumn;
     public int colorColumn;
+    public List<DrawingData> drawings = new List<DrawingData>();
 }
 
 public class SaveLoadManager : MonoBehaviour
@@ -48,7 +74,7 @@ public class SaveLoadManager : MonoBehaviour
             state.vizRotation[2] = coordSystem.transform.eulerAngles.z;
         }
         
-        // Get axis mapping from PointCloudRenderer
+        // Get axis mapping
         PointCloudRenderer renderer = FindFirstObjectByType<PointCloudRenderer>();
         if (renderer != null)
         {
@@ -58,11 +84,27 @@ public class SaveLoadManager : MonoBehaviour
             state.colorColumn = renderer.GetColorColumn();
         }
         
+        // Get drawings
+        VRDrawing drawing = FindFirstObjectByType<VRDrawing>();
+        if (drawing != null)
+        {
+            List<List<Vector3>> drawingsData = drawing.GetAllDrawingsData();
+            foreach (List<Vector3> points in drawingsData)
+            {
+                DrawingData dd = new DrawingData();
+                foreach (Vector3 p in points)
+                {
+                    dd.points.Add(new SerializableVector3(p));
+                }
+                state.drawings.Add(dd);
+            }
+        }
+        
         // Save to JSON
         string json = JsonUtility.ToJson(state, true);
         File.WriteAllText(savePath, json);
         
-        Debug.Log("View state saved!");
+        Debug.Log("View state saved with " + state.drawings.Count + " drawings!");
     }
     
     public void LoadViewState()
@@ -99,6 +141,23 @@ public class SaveLoadManager : MonoBehaviour
         {
             renderer.SetAxisMapping(state.xColumn, state.yColumn, state.zColumn);
             renderer.SetColorColumn(state.colorColumn);
+        }
+        
+        // Load drawings
+        VRDrawing drawing = FindFirstObjectByType<VRDrawing>();
+        if (drawing != null && state.drawings != null)
+        {
+            List<List<Vector3>> drawingsData = new List<List<Vector3>>();
+            foreach (DrawingData dd in state.drawings)
+            {
+                List<Vector3> points = new List<Vector3>();
+                foreach (SerializableVector3 sv in dd.points)
+                {
+                    points.Add(sv.ToVector3());
+                }
+                drawingsData.Add(points);
+            }
+            drawing.LoadDrawings(drawingsData);
         }
         
         Debug.Log("View state loaded!");

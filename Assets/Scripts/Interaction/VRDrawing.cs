@@ -17,12 +17,20 @@ public class VRDrawing : MonoBehaviour
     private List<GameObject> allDrawings = new List<GameObject>();
     private bool isDrawing = false;
     private int drawingCount = 0;
+    private Transform visualizationRoot;
     
     private void Start()
     {
         if (drawPoint == null)
         {
             drawPoint = transform;
+        }
+
+            // Cache visualization root
+        CoordinateSystem coordSystem = FindFirstObjectByType<CoordinateSystem>();
+        if (coordSystem != null)
+        {
+            visualizationRoot = coordSystem.transform;
         }
     }
     
@@ -67,49 +75,79 @@ public class VRDrawing : MonoBehaviour
     }
     
     private void StartDrawing()
+{
+    isDrawing = true;
+    
+    // Get fresh reference to visualization root
+    CoordinateSystem coordSystem = FindFirstObjectByType<CoordinateSystem>();
+    if (coordSystem != null)
     {
-        isDrawing = true;
-        
-        // Create new line
-        GameObject lineObj = new GameObject("Drawing_" + drawingCount);
-
-        // Parent to CoordinateSystem so it moves with visualization
+        visualizationRoot = coordSystem.transform;
+    }
+    
+    // Create new line as child of visualization
+    GameObject lineObj = new GameObject("Drawing_" + drawingCount);
+    drawingCount++;
+    
+    if (visualizationRoot != null)
+    {
+        lineObj.transform.SetParent(visualizationRoot);
+        lineObj.transform.localPosition = Vector3.zero;
+        lineObj.transform.localRotation = Quaternion.identity;
+    }
+    
+    currentLine = lineObj.AddComponent<LineRenderer>();
+    currentLine.startWidth = lineWidth;
+    currentLine.endWidth = lineWidth;
+    currentLine.material = new Material(Shader.Find("Sprites/Default"));
+    currentLine.startColor = drawColor;
+    currentLine.endColor = drawColor;
+    currentLine.positionCount = 0;
+    currentLine.useWorldSpace = false;
+    
+    currentPositions.Clear();
+    allDrawings.Add(lineObj);
+    
+    Debug.Log("Drawing started");
+}
+    
+    private void UpdateDrawing()
+{
+    if (currentLine == null) return;
+    
+    // Get the parent transform (should be CoordinateSystem)
+    Transform parent = currentLine.transform.parent;
+    
+    if (parent == null)
+    {
+        // Fallback - find CoordinateSystem
         CoordinateSystem coordSystem = FindFirstObjectByType<CoordinateSystem>();
         if (coordSystem != null)
         {
-            lineObj.transform.SetParent(coordSystem.transform);
+            currentLine.transform.SetParent(coordSystem.transform);
+            parent = coordSystem.transform;
         }
-        drawingCount++;
-        
-        currentLine = lineObj.AddComponent<LineRenderer>();
-        currentLine.startWidth = lineWidth;
-        currentLine.endWidth = lineWidth;
-        currentLine.material = new Material(Shader.Find("Sprites/Default"));
-        currentLine.startColor = drawColor;
-        currentLine.endColor = drawColor;
-        currentLine.positionCount = 0;
-        currentLine.useWorldSpace = true;
-        
-        currentPositions.Clear();
-        allDrawings.Add(lineObj);
-        
-        Debug.Log("Drawing started");
     }
     
-    private void UpdateDrawing()
+    // Convert controller world position to local space of parent
+    Vector3 localPos;
+    if (parent != null)
     {
-        if (currentLine == null) return;
-        
-        Vector3 currentPos = drawPoint.position;
-        
-        // Only add point if moved enough
-        if (currentPositions.Count == 0 || Vector3.Distance(currentPos, currentPositions[currentPositions.Count - 1]) > minDistance)
-        {
-            currentPositions.Add(currentPos);
-            currentLine.positionCount = currentPositions.Count;
-            currentLine.SetPositions(currentPositions.ToArray());
-        }
+        localPos = parent.InverseTransformPoint(drawPoint.position);
     }
+    else
+    {
+        localPos = drawPoint.position;
+    }
+    
+    // Only add point if moved enough
+    if (currentPositions.Count == 0 || Vector3.Distance(localPos, currentPositions[currentPositions.Count - 1]) > minDistance)
+    {
+        currentPositions.Add(localPos);
+        currentLine.positionCount = currentPositions.Count;
+        currentLine.SetPositions(currentPositions.ToArray());
+    }
+}
     
     private void StopDrawing()
     {
@@ -153,4 +191,61 @@ public class VRDrawing : MonoBehaviour
             Debug.Log("Undo drawing");
         }
     }
+
+    public List<List<Vector3>> GetAllDrawingsData()
+{
+    List<List<Vector3>> data = new List<List<Vector3>>();
+    
+    foreach (GameObject drawing in allDrawings)
+    {
+        if (drawing == null) continue;
+        
+        LineRenderer lr = drawing.GetComponent<LineRenderer>();
+        if (lr != null)
+        {
+            List<Vector3> points = new List<Vector3>();
+            Vector3[] positions = new Vector3[lr.positionCount];
+            lr.GetPositions(positions);
+            points.AddRange(positions);
+            data.Add(points);
+        }
+    }
+    
+    return data;
+}
+
+public void LoadDrawings(List<List<Vector3>> data)
+{
+    ClearAllDrawings();
+    
+    CoordinateSystem coordSystem = FindFirstObjectByType<CoordinateSystem>();
+    Transform parent = coordSystem != null ? coordSystem.transform : null;
+    
+    foreach (List<Vector3> points in data)
+    {
+        if (points.Count < 2) continue;
+        
+        GameObject lineObj = new GameObject("Drawing_" + drawingCount);
+        drawingCount++;
+        
+        if (parent != null)
+        {
+            lineObj.transform.SetParent(parent);
+        }
+        
+        LineRenderer lr = lineObj.AddComponent<LineRenderer>();
+        lr.startWidth = lineWidth;
+        lr.endWidth = lineWidth;
+        lr.material = new Material(Shader.Find("Sprites/Default"));
+        lr.startColor = drawColor;
+        lr.endColor = drawColor;
+        lr.useWorldSpace = false;
+        lr.positionCount = points.Count;
+        lr.SetPositions(points.ToArray());
+        
+        allDrawings.Add(lineObj);
+    }
+    
+    Debug.Log("Loaded " + data.Count + " drawings");
+}
 }

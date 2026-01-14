@@ -59,14 +59,14 @@ public class AxisMappingUI : MonoBehaviour
         canvasObj.AddComponent<TrackedDeviceGraphicRaycaster>();
         
         RectTransform canvasRect = canvasObj.GetComponent<RectTransform>();
-        canvasRect.sizeDelta = new Vector2(500, 900);
+        canvasRect.sizeDelta = new Vector2(500, 1050);
         canvasRect.position = panelPosition;
         canvasRect.eulerAngles = panelRotation;
         canvasRect.localScale = Vector3.one * 0.005f;
         
         // Add collider for raycast
         BoxCollider collider = canvasObj.AddComponent<BoxCollider>();
-        collider.size = new Vector3(500, 900, 10);
+        collider.size = new Vector3(500, 1050, 10);
         
         // Create Panel
         GameObject panelObj = CreatePanel(canvasObj.transform);
@@ -82,22 +82,25 @@ public class AxisMappingUI : MonoBehaviour
         
         
         // Create Apply button
-CreateButton(panelObj.transform, "Apply", new Vector2(0, -10), OnApply);
+CreateButton(panelObj.transform, "Apply", new Vector2(0, 80), OnApply);
 
 // Create Reset button
-CreateButton(panelObj.transform, "Reset View", new Vector2(0, -65), OnResetView);
+CreateButton(panelObj.transform, "Reset View", new Vector2(0, 15), OnResetView);
 
 // Create Clear Drawings button
-CreateButton(panelObj.transform, "Clear Drawings", new Vector2(0, -120), OnClearDrawings);
+CreateButton(panelObj.transform, "Clear Drawings", new Vector2(0, -30), OnClearDrawings);
 
 // Create Undo Drawing button
-CreateButton(panelObj.transform, "Undo Drawing", new Vector2(0, -175), OnUndoDrawing);
+CreateButton(panelObj.transform, "Undo Drawing", new Vector2(0, -85), OnUndoDrawing);
 
 // Create Save button
-CreateButton(panelObj.transform, "Save View", new Vector2(0, -230), OnSaveView);
+CreateButton(panelObj.transform, "Save View", new Vector2(0, -140), OnSaveView);
 
 // Create Load button
-CreateButton(panelObj.transform, "Load View", new Vector2(0, -285), OnLoadView);
+CreateButton(panelObj.transform, "Load View", new Vector2(0, -195), OnLoadView);
+
+// Create AR Toggle button
+CreateButton(panelObj.transform, "Toggle AR/VR", new Vector2(0, -250), OnToggleAR);
 
     }
     
@@ -335,6 +338,17 @@ CreateButton(panelObj.transform, "Load View", new Vector2(0, -285), OnLoadView);
         
         pointCloudRenderer.SetAxisMapping(xIndex, yIndex, zIndex);
         pointCloudRenderer.SetColorColumn(colorSelection);
+
+        // Update axis labels
+        CoordinateSystem coordSystem = FindFirstObjectByType<CoordinateSystem>();
+        if (coordSystem != null)
+        {
+            coordSystem.UpdateAxisLabels(
+                numericNames[xSelection],
+                numericNames[ySelection],
+                numericNames[zSelection]
+            );
+        }
         
         Debug.Log($"Mapping: X={numericNames[xSelection]}, Y={numericNames[ySelection]}, Z={numericNames[zSelection]}, Color={allNames[colorSelection]}");
     }
@@ -379,5 +393,15 @@ private void OnLoadView()
 {
     SaveLoadManager.Instance.LoadViewState();
     Debug.Log("View loaded!");
+}
+
+private void OnToggleAR()
+{
+    ARToggle arToggle = FindFirstObjectByType<ARToggle>();
+    if (arToggle != null)
+    {
+        arToggle.ToggleARMode();
+    }
+    Debug.Log("AR/VR toggled!");
 }
 }
