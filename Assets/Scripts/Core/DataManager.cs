@@ -6,7 +6,7 @@ public class DataManager : MonoBehaviour
      public static DataManager Instance { get; private set; }
 
     [Header("Settings")]
-    [SerializeField] private string defaultFileName = "sample.csv";
+    [SerializeField] private string defaultFileName = "iris.csv";
     [SerializeField] private char delimiter = ',';
     
     [Header("Debug")]

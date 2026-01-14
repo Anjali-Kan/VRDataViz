@@ -16,6 +16,11 @@ public class CoordinateSystem : MonoBehaviour
     [SerializeField] private Color zAxisColor = Color.blue;
     [SerializeField] private Color gridColor = new Color(1f, 1f, 1f, 0.3f);
 
+
+    private TextMesh xLabelText;
+    private TextMesh yLabelText;
+    private TextMesh zLabelText;
+
     private void Start()
     {
         CreateAxes();
@@ -63,21 +68,32 @@ public class CoordinateSystem : MonoBehaviour
        
     }
 
-    private void CreateLabel(string text, Vector3 position, Color color)
+private void CreateLabel(string text, Vector3 position, Color color)
+{
+    GameObject label = new GameObject("Label_" + text);
+    label.transform.SetParent(transform);
+    label.transform.localPosition = position;
+    
+    TextMesh textMesh = label.AddComponent<TextMesh>();
+    textMesh.text = text;
+    textMesh.fontSize = 50;
+    textMesh.characterSize = 0.1f;
+    textMesh.anchor = TextAnchor.MiddleCenter;
+    textMesh.alignment = TextAlignment.Center;
+    textMesh.color = color;
+    
+    // Store references
+    if (text == "X") xLabelText = textMesh;
+    else if (text == "Y") yLabelText = textMesh;
+    else if (text == "Z") zLabelText = textMesh;
+}
+
+    public void UpdateAxisLabels(string xName, string yName, string zName)
     {
-        GameObject label = new GameObject("Label_" + text);
-        label.transform.SetParent(transform);
-        label.transform.localPosition = position;
-
-        TextMesh textMesh = label.AddComponent<TextMesh>();
-        textMesh.text = text;
-        textMesh.fontSize = 50;
-        textMesh.characterSize = 0.1f;
-        textMesh.color = color;
-        textMesh.anchor = TextAnchor.MiddleCenter;
-        textMesh.alignment = TextAlignment.Center;
+        if (xLabelText != null) xLabelText.text = xName;
+        if (yLabelText != null) yLabelText.text = yName;
+        if (zLabelText != null) zLabelText.text = zName;
     }
-
     private void CreateAxisLine(Vector3 direction,float length, Color color, string name)
     {
         GameObject axis = new GameObject(name);
@@ -85,6 +101,7 @@ public class CoordinateSystem : MonoBehaviour
         
         LineRenderer lr = axis.AddComponent<LineRenderer>();
         lr.positionCount = 2;
+        lr.useWorldSpace = false;
         lr.SetPosition(0, direction * -length);  // Negative direction
         lr.SetPosition(1, direction * length);   // Positive direction
         
@@ -104,8 +121,10 @@ public class CoordinateSystem : MonoBehaviour
         GameObject gridLine = new GameObject(name);
         gridLine.transform.SetParent(transform);
 
+
         LineRenderer lineRenderer = gridLine.AddComponent<LineRenderer>();
         lineRenderer.positionCount = 2;
+        lineRenderer.useWorldSpace = false;
         lineRenderer.SetPosition(0, start);
         lineRenderer.SetPosition(1, end);
         lineRenderer.startWidth = gridLineThickness;
