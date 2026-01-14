@@ -59,39 +59,46 @@ public class AxisMappingUI : MonoBehaviour
         canvasObj.AddComponent<TrackedDeviceGraphicRaycaster>();
         
         RectTransform canvasRect = canvasObj.GetComponent<RectTransform>();
-        canvasRect.sizeDelta = new Vector2(500, 750);
+        canvasRect.sizeDelta = new Vector2(500, 900);
         canvasRect.position = panelPosition;
         canvasRect.eulerAngles = panelRotation;
         canvasRect.localScale = Vector3.one * 0.005f;
         
         // Add collider for raycast
         BoxCollider collider = canvasObj.AddComponent<BoxCollider>();
-        collider.size = new Vector3(500, 750, 10);
+        collider.size = new Vector3(500, 900, 10);
         
         // Create Panel
         GameObject panelObj = CreatePanel(canvasObj.transform);
         
         // Create Title
-        CreateTitle(panelObj.transform, "Axis Mapping", new Vector2(0, 260));
+        CreateTitle(panelObj.transform, "Axis Mapping", new Vector2(0, 420));
         
         // Create axis rows
-        xLabel = CreateAxisRow(panelObj.transform, "X Axis:", new Vector2(0, 100), OnXPrev, OnXNext);
-        yLabel = CreateAxisRow(panelObj.transform, "Y Axis:", new Vector2(0, 40), OnYPrev, OnYNext);
-        zLabel = CreateAxisRow(panelObj.transform, "Z Axis:", new Vector2(0, -20), OnZPrev, OnZNext);
-        colorLabel = CreateAxisRow(panelObj.transform, "Color:", new Vector2(0, -80), OnColorPrev, OnColorNext);
+        xLabel = CreateAxisRow(panelObj.transform, "X Axis:", new Vector2(0, 330), OnXPrev, OnXNext);
+        yLabel = CreateAxisRow(panelObj.transform, "Y Axis:", new Vector2(0, 280), OnYPrev, OnYNext);
+        zLabel = CreateAxisRow(panelObj.transform, "Z Axis:", new Vector2(0, 230), OnZPrev, OnZNext);
+        colorLabel = CreateAxisRow(panelObj.transform, "Color:", new Vector2(0, 180), OnColorPrev, OnColorNext);
         
         
         // Create Apply button
-        CreateButton(panelObj.transform, "Apply", new Vector2(0, -140), OnApply);
+CreateButton(panelObj.transform, "Apply", new Vector2(0, -10), OnApply);
 
-        // Create Reset button
-        CreateButton(panelObj.transform, "Reset View", new Vector2(0, -195), OnResetView);
+// Create Reset button
+CreateButton(panelObj.transform, "Reset View", new Vector2(0, -65), OnResetView);
 
-        // Create Clear Drawings button
-        CreateButton(panelObj.transform, "Clear Drawings", new Vector2(0, -250), OnClearDrawings);
+// Create Clear Drawings button
+CreateButton(panelObj.transform, "Clear Drawings", new Vector2(0, -120), OnClearDrawings);
 
-        // Create Undo Drawing button
-        CreateButton(panelObj.transform, "Undo Drawing", new Vector2(0, -305), OnUndoDrawing);
+// Create Undo Drawing button
+CreateButton(panelObj.transform, "Undo Drawing", new Vector2(0, -175), OnUndoDrawing);
+
+// Create Save button
+CreateButton(panelObj.transform, "Save View", new Vector2(0, -230), OnSaveView);
+
+// Create Load button
+CreateButton(panelObj.transform, "Load View", new Vector2(0, -285), OnLoadView);
+
     }
     
     private GameObject CreatePanel(Transform parent)
@@ -360,5 +367,17 @@ private void OnUndoDrawing()
         drawing.UndoLastDrawing();
     }
     Debug.Log("Undo last drawing!");
+}
+
+private void OnSaveView()
+{
+    SaveLoadManager.Instance.SaveViewState();
+    Debug.Log("View saved!");
+}
+
+private void OnLoadView()
+{
+    SaveLoadManager.Instance.LoadViewState();
+    Debug.Log("View loaded!");
 }
 }

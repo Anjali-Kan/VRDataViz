@@ -206,4 +206,10 @@ public void ClearFilters()
     
     Debug.Log("Filters cleared");
 }
+
+public int GetXColumn() { return xColumnIndex; }
+public int GetYColumn() { return yColumnIndex; }
+public int GetZColumn() { return zColumnIndex; }
+public int GetColorColumn() { return colorColumnIndex; }
+
 }
