@@ -2743,7 +2743,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5c810bdb1c46ea34fb7bc85ffd0ac07e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::DataManager
-  defaultFileName: iris.csv
+  defaultFileName: sample.csv
   delimiter: 44
   loadOnStart: 1
   logColumnInfo: 1
