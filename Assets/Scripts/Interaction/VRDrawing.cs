@@ -72,6 +72,13 @@ public class VRDrawing : MonoBehaviour
         
         // Create new line
         GameObject lineObj = new GameObject("Drawing_" + drawingCount);
+
+        // Parent to CoordinateSystem so it moves with visualization
+        CoordinateSystem coordSystem = FindFirstObjectByType<CoordinateSystem>();
+        if (coordSystem != null)
+        {
+            lineObj.transform.SetParent(coordSystem.transform);
+        }
         drawingCount++;
         
         currentLine = lineObj.AddComponent<LineRenderer>();
