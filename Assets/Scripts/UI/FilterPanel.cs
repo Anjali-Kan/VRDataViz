@@ -53,13 +53,13 @@ public class FilterPanel : MonoBehaviour
         canvasObj.AddComponent<TrackedDeviceGraphicRaycaster>();
         
         RectTransform canvasRect = canvasObj.GetComponent<RectTransform>();
-        canvasRect.sizeDelta = new Vector2(400, 500);
+        canvasRect.sizeDelta = new Vector2(400, 600);
         canvasRect.position = panelPosition;
         canvasRect.eulerAngles = panelRotation;
         canvasRect.localScale = Vector3.one * 0.005f;
         
         BoxCollider collider = canvasObj.AddComponent<BoxCollider>();
-        collider.size = new Vector3(400, 500, 10);
+        collider.size = new Vector3(400, 600, 10);
         
         // Create Panel
         GameObject panelObj = new GameObject("Panel");

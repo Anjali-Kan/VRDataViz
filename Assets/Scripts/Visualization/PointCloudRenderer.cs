@@ -9,9 +9,9 @@ public class PointCloudRenderer : MonoBehaviour
     [SerializeField] private float axisLength = 5f;
     
     [Header("Column Mapping")]
-    [SerializeField] private int xColumnIndex = 1;
-    [SerializeField] private int yColumnIndex = 2;
-    [SerializeField] private int zColumnIndex = 3;
+    [SerializeField] private int xColumnIndex = 2;
+    [SerializeField] private int yColumnIndex = 3;
+    [SerializeField] private int zColumnIndex = 0;
     [SerializeField] private int colorColumnIndex = 4;
     
     [Header("Colors")]
