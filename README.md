@@ -142,7 +142,10 @@ Scripts/
 
 Anjali Kan
 
+LinkedIn: https://www.linkedin.com/in/anjali-kanvinde
+Portfolio: https://anjali-kanvinde.vercel.app/
 GitHub: https://github.com/Anjali-Kan
+
 
 ## License
 
