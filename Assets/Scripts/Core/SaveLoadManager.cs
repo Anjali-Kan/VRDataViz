@@ -118,7 +118,7 @@ public class SaveLoadManager : MonoBehaviour
         string json = File.ReadAllText(savePath);
         ViewState state = JsonUtility.FromJson<ViewState>(json);
         
-        // Apply visualization transform
+        // Apply visualization transform FIRST
         CoordinateSystem coordSystem = FindFirstObjectByType<CoordinateSystem>();
         if (coordSystem != null)
         {
@@ -143,7 +143,18 @@ public class SaveLoadManager : MonoBehaviour
             renderer.SetColorColumn(state.colorColumn);
         }
         
-        // Load drawings
+        // Load drawings AFTER transform is applied
+        // Use a coroutine to ensure transform is fully applied before loading drawings
+        StartCoroutine(LoadDrawingsAfterTransform(state));
+        
+        Debug.Log("View state loaded!");
+    }
+    
+    private System.Collections.IEnumerator LoadDrawingsAfterTransform(ViewState state)
+    {
+        // Wait a frame to ensure transform is fully applied
+        yield return null;
+        
         VRDrawing drawing = FindFirstObjectByType<VRDrawing>();
         if (drawing != null && state.drawings != null)
         {
@@ -158,8 +169,7 @@ public class SaveLoadManager : MonoBehaviour
                 drawingsData.Add(points);
             }
             drawing.LoadDrawings(drawingsData);
+            Debug.Log("Drawings loaded after transform applied");
         }
-        
-        Debug.Log("View state loaded!");
     }
 }
