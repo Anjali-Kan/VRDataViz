@@ -12,6 +12,8 @@ Built as a portfolio project demonstrating XR development, data visualization, a
 ## Screenshots
 
 ### Data Visualization Overview
+![OverviewLorenz](Screenshots/lorenz.png)
+
 ![Overview](Screenshots/OverViewShot.png)
 
 ### Axis Mapping Controls
@@ -23,11 +25,28 @@ Built as a portfolio project demonstrating XR development, data visualization, a
 ### 3D Annotations
 ![Drawing](Screenshots/CustomAnnotations.png)
 
+### Live Demo on:
+Itch.io : https://sketcherex.itch.io/vr-dataviz
+Other projects: https://anjali-kanvinde.vercel.app/
+
+
+<iframe frameborder="0" src="https://itch.io/embed/4200935?linkback=true&amp;bg_color=0B0B0B&amp;fg_color=C3CFA1&amp;link_color=B27EE3&amp;border_color=B27EE3" width="552" height="167"><a href="https://sketcherex.itch.io/vr-dataviz">VR DataViz by Sketcherex</a></iframe>
+
+## Author
+
+Anjali Kan
+
+LinkedIn: https://www.linkedin.com/in/anjali-kanvinde
+
+Portfolio: https://anjali-kanvinde.vercel.app/
+
+GitHub: https://github.com/Anjali-Kan
+
 
 ## Features
 
 ### Data Visualization
-- Load any CSV with automatic numeric vs categorical column detection
+- Load any CSV with automatic numeric vs categorical column detection. Can handle upto 6K datapoints and I am working on increasing this capacity.
 - Dynamically map columns to X, Y, Z spatial axes
 - Color encoding with gradients for numeric data and distinct colors for categories
 - Axis labels update to reflect mapped column names
@@ -63,7 +82,13 @@ CSV parsing handles quoted fields containing commas, missing values, and automat
 
 ## Demo Dataset
 
-Includes Fisher's Iris dataset - a classic machine learning dataset with 150 samples of 3 flower species. When visualized with Petal Length, Petal Width, and Sepal Length on axes and Species as color, three distinct clusters emerge demonstrating the natural groupings in the data.
+### Lorenz Attractor (Default Dataset)
+
+![DatasetOverview](Screenshots/lorenz2.png)
+Includes a Lorenz attractor dataset — a classic example of a chaotic dynamical system. The data consists of a few thousand 3D points (x,y,z) sampled over time, forming a distinctive butterfly-shaped structure. When visualized as a point cloud, the dataset highlights depth, continuity, and spatial structure, making it well-suited for immersive 3D exploration and performance-constrained WebGL rendering.
+
+### Fisher's Iris dataset
+Also includes this classic machine learning dataset with 150 samples of 3 flower species. When visualized with Petal Length, Petal Width, and Sepal Length on axes and Species as color, three distinct clusters emerge demonstrating the natural groupings in the data. We can clearly visualise the clusters and how distinct they are from each other.
 
 ## Tech Stack
 
@@ -138,15 +163,6 @@ Scripts/
 - ML integration showing PCA or clustering results
 - Support for larger datasets with LOD system
 
-## Author
-
-Anjali Kan
-
-LinkedIn: https://www.linkedin.com/in/anjali-kanvinde
-
-Portfolio: https://anjali-kanvinde.vercel.app/
-
-GitHub: https://github.com/Anjali-Kan
 
 
 ## License
