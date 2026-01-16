@@ -332,12 +332,30 @@ CreateButton(panelObj.transform, "Toggle AR/VR", new Vector2(0, -250), OnToggleA
         
         if (pointCloudRenderer == null || numericIndices.Count == 0) return;
         
+        // Validate selections are in range
+        if (xSelection < 0 || xSelection >= numericIndices.Count ||
+            ySelection < 0 || ySelection >= numericIndices.Count ||
+            zSelection < 0 || zSelection >= numericIndices.Count)
+        {
+            Debug.LogWarning($"[AxisMappingUI] Invalid selection indices - X:{xSelection}, Y:{ySelection}, Z:{zSelection} (max: {numericIndices.Count-1})");
+            return;
+        }
+        
+        if (colorSelection < 0 || colorSelection >= allNames.Count)
+        {
+            Debug.LogWarning($"[AxisMappingUI] Invalid colorSelection {colorSelection} (max: {allNames.Count-1}), clamping");
+            colorSelection = Mathf.Clamp(colorSelection, 0, allNames.Count - 1);
+        }
+        
         int xIndex = numericIndices[xSelection];
         int yIndex = numericIndices[ySelection];
         int zIndex = numericIndices[zSelection];
         
-        pointCloudRenderer.SetAxisMapping(xIndex, yIndex, zIndex);
-        pointCloudRenderer.SetColorColumn(colorSelection);
+        // Use combined method to avoid double-rendering
+        if (pointCloudRenderer != null)
+        {
+            pointCloudRenderer.SetMappingAndColor(xIndex, yIndex, zIndex, colorSelection);
+        }
 
         // Update axis labels
         CoordinateSystem coordSystem = FindFirstObjectByType<CoordinateSystem>();

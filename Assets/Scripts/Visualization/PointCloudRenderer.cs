@@ -28,25 +28,75 @@ public class PointCloudRenderer : MonoBehaviour
     
     private List<GameObject> pointObjects = new List<GameObject>();
     private DataSet dataSet;
+    private bool isSubscribed = false;
     
     private void Start()
     {
         SetupDefaultGradient();
         
-        DataManager.Instance.OnDataLoaded += OnDataLoaded;
+        // Wait a frame to ensure DataManager.Instance is set (Awake runs before Start, but be defensive)
+        StartCoroutine(InitializeAfterFrame());
+    }
+    
+    private System.Collections.IEnumerator InitializeAfterFrame()
+    {
+        yield return null; // Wait one frame
         
-        if (DataManager.Instance.IsDataLoaded)
+        SubscribeToDataManager();
+        
+        // If data is already loaded, visualize it
+        if (DataManager.Instance != null && DataManager.Instance.IsDataLoaded)
         {
+            Debug.Log("[PointCloudRenderer] Data already loaded on Start, visualizing immediately");
             OnDataLoaded();
+        }
+        else if (DataManager.Instance == null)
+        {
+            Debug.LogError("[PointCloudRenderer] DataManager.Instance is null after frame wait!");
+        }
+    }
+    
+    private void OnEnable()
+    {
+        // Ensure subscription if component gets re-enabled
+        SubscribeToDataManager();
+    }
+    
+    private void OnDisable()
+    {
+        UnsubscribeFromDataManager();
+    }
+    
+    private void SubscribeToDataManager()
+    {
+        if (DataManager.Instance != null && !isSubscribed)
+        {
+            DataManager.Instance.OnDataLoaded += OnDataLoaded;
+            isSubscribed = true;
+            Debug.Log("[PointCloudRenderer] Subscribed to OnDataLoaded event");
+        }
+    }
+    
+    private void UnsubscribeFromDataManager()
+    {
+        if (DataManager.Instance != null && isSubscribed)
+        {
+            DataManager.Instance.OnDataLoaded -= OnDataLoaded;
+            isSubscribed = false;
+            Debug.Log("[PointCloudRenderer] Unsubscribed from OnDataLoaded event");
         }
     }
     
     private void OnDestroy()
     {
-        if (DataManager.Instance != null)
+        if (DataManager.Instance != null && isSubscribed)
         {
             DataManager.Instance.OnDataLoaded -= OnDataLoaded;
+            isSubscribed = false;
         }
+        
+        // Clean up all point objects
+        ClearAllPoints();
     }
     
     private void SetupDefaultGradient()
@@ -67,24 +117,109 @@ public class PointCloudRenderer : MonoBehaviour
     
     private void OnDataLoaded()
     {
-        dataSet = DataManager.Instance.CurrentDataSet;
-        GeneratePoints();
+        Debug.Log("[PointCloudRenderer] OnDataLoaded event received");
+        dataSet = DataManager.Instance?.CurrentDataSet;
+        
+        if (dataSet == null)
+        {
+            Debug.LogWarning("[PointCloudRenderer] CurrentDataSet is null");
+            return;
+        }
+        
+        // Validate and reset column indices for new dataset
+        ValidateColumnIndices();
+        
+        // Wait a frame to allow AxisMappingUI to apply its mapping first
+        // This ensures consistent visualization regardless of load order
+        // AxisMappingUI will call SetAxisMapping/SetColorColumn which triggers GeneratePoints
+        // So we delay to avoid double-rendering with different indices
+        StartCoroutine(DelayedGeneratePoints());
+    }
+    
+    private System.Collections.IEnumerator DelayedGeneratePoints()
+    {
+        yield return null; // Wait one frame for AxisMappingUI to apply mapping via ApplyMapping()
+        
+        // Only generate if AxisMappingUI hasn't already triggered it
+        // (AxisMappingUI calls SetAxisMapping/SetColorColumn which calls GeneratePoints)
+        // Check if we're still on the same dataset to avoid race conditions
+        if (dataSet != null && dataSet == DataManager.Instance?.CurrentDataSet)
+        {
+            Debug.Log($"[PointCloudRenderer] Rebuilding visualization with {dataSet.Parser.RowCount} rows (after AxisMappingUI delay)");
+            GeneratePoints();
+        }
+    }
+    
+    private void ValidateColumnIndices()
+    {
+        if (dataSet == null || dataSet.Columns == null || dataSet.Columns.Count == 0)
+        {
+            Debug.LogWarning("[PointCloudRenderer] Cannot validate indices - no columns available");
+            return;
+        }
+        
+        int columnCount = dataSet.Columns.Count;
+        bool indicesChanged = false;
+        
+        // Clamp indices to valid range
+        if (xColumnIndex < 0 || xColumnIndex >= columnCount)
+        {
+            Debug.LogWarning($"[PointCloudRenderer] xColumnIndex {xColumnIndex} out of range (0-{columnCount-1}), resetting to 0");
+            xColumnIndex = 0;
+            indicesChanged = true;
+        }
+        
+        if (yColumnIndex < 0 || yColumnIndex >= columnCount)
+        {
+            Debug.LogWarning($"[PointCloudRenderer] yColumnIndex {yColumnIndex} out of range (0-{columnCount-1}), resetting to {Mathf.Min(1, columnCount-1)}");
+            yColumnIndex = Mathf.Min(1, columnCount - 1);
+            indicesChanged = true;
+        }
+        
+        if (zColumnIndex < 0 || zColumnIndex >= columnCount)
+        {
+            Debug.LogWarning($"[PointCloudRenderer] zColumnIndex {zColumnIndex} out of range (0-{columnCount-1}), resetting to {Mathf.Min(2, columnCount-1)}");
+            zColumnIndex = Mathf.Min(2, columnCount - 1);
+            indicesChanged = true;
+        }
+        
+        if (colorColumnIndex < 0 || colorColumnIndex >= columnCount)
+        {
+            Debug.LogWarning($"[PointCloudRenderer] colorColumnIndex {colorColumnIndex} out of range (0-{columnCount-1}), resetting to {columnCount-1}");
+            colorColumnIndex = columnCount - 1;
+            indicesChanged = true;
+        }
+        
+        if (indicesChanged)
+        {
+            Debug.Log($"[PointCloudRenderer] Column indices validated: X={xColumnIndex}, Y={yColumnIndex}, Z={zColumnIndex}, Color={colorColumnIndex}");
+        }
+    }
+    
+    private void ClearAllPoints()
+    {
+        foreach (GameObject obj in pointObjects)
+        {
+            if (obj != null)
+                Destroy(obj);
+        }
+        pointObjects.Clear();
     }
     
     public void GeneratePoints()
     {
         if (dataSet == null || !dataSet.IsLoaded)
         {
-            Debug.LogWarning("No data loaded");
+            Debug.LogWarning("[PointCloudRenderer] No data loaded - cannot generate points");
             return;
         }
         
+        // Validate indices before using them
+        ValidateColumnIndices();
+        
+        Debug.Log($"[PointCloudRenderer] Clearing {pointObjects.Count} old point objects");
         // Clear old points
-        foreach (GameObject obj in pointObjects)
-        {
-            Destroy(obj);
-        }
-        pointObjects.Clear();
+        ClearAllPoints();
         
         // Get normalized positions
         float[] xValues = dataSet.GetNormalizedColumn(xColumnIndex, 0, axisLength);
@@ -120,11 +255,30 @@ public class PointCloudRenderer : MonoBehaviour
             pointObjects.Add(point);
         }
         
-        Debug.Log($"Generated {totalPoints} colored points");
+        Debug.Log($"[PointCloudRenderer] Generated {totalPoints} colored points");
     }
     
     private Color[] GetColorsForColumn(int columnIndex)
     {
+        if (dataSet == null || dataSet.Columns == null)
+        {
+            Debug.LogError("[PointCloudRenderer] GetColorsForColumn: dataSet or Columns is null");
+            return new Color[0];
+        }
+        
+        if (columnIndex < 0 || columnIndex >= dataSet.Columns.Count)
+        {
+            Debug.LogError($"[PointCloudRenderer] GetColorsForColumn: columnIndex {columnIndex} out of range (0-{dataSet.Columns.Count-1})");
+            // Return default color array
+            int defaultRowCount = dataSet.Parser?.RowCount ?? 0;
+            Color[] defaultColors = new Color[defaultRowCount];
+            for (int i = 0; i < defaultRowCount; i++)
+            {
+                defaultColors[i] = Color.white;
+            }
+            return defaultColors;
+        }
+        
         int rowCount = dataSet.Parser.RowCount;
         Color[] colors = new Color[rowCount];
         
@@ -153,15 +307,71 @@ public class PointCloudRenderer : MonoBehaviour
     
     public void SetAxisMapping(int x, int y, int z)
     {
-        xColumnIndex = x;
-        yColumnIndex = y;
-        zColumnIndex = z;
+        if (dataSet == null || dataSet.Columns == null)
+        {
+            Debug.LogWarning("[PointCloudRenderer] SetAxisMapping: No dataset loaded, ignoring");
+            return;
+        }
+        
+        int columnCount = dataSet.Columns.Count;
+        
+        // Validate and clamp indices
+        xColumnIndex = Mathf.Clamp(x, 0, columnCount - 1);
+        yColumnIndex = Mathf.Clamp(y, 0, columnCount - 1);
+        zColumnIndex = Mathf.Clamp(z, 0, columnCount - 1);
+        
+        if (x != xColumnIndex || y != yColumnIndex || z != zColumnIndex)
+        {
+            Debug.LogWarning($"[PointCloudRenderer] SetAxisMapping: Indices clamped to valid range (0-{columnCount-1})");
+        }
+        
         GeneratePoints();
     }
     
     public void SetColorColumn(int columnIndex)
     {
-        colorColumnIndex = columnIndex;
+        if (dataSet == null || dataSet.Columns == null)
+        {
+            Debug.LogWarning("[PointCloudRenderer] SetColorColumn: No dataset loaded, ignoring");
+            return;
+        }
+        
+        int columnCount = dataSet.Columns.Count;
+        
+        // Validate and clamp index
+        int oldIndex = colorColumnIndex;
+        colorColumnIndex = Mathf.Clamp(columnIndex, 0, columnCount - 1);
+        
+        if (columnIndex != colorColumnIndex)
+        {
+            Debug.LogWarning($"[PointCloudRenderer] SetColorColumn: Index {columnIndex} out of range (0-{columnCount-1}), clamped to {colorColumnIndex}");
+        }
+        
+        // Only regenerate if color column actually changed
+        if (oldIndex != colorColumnIndex)
+        {
+            GeneratePoints();
+        }
+    }
+    
+    // Method to set both axis mapping and color column at once (used by AxisMappingUI to avoid double-rendering)
+    public void SetMappingAndColor(int x, int y, int z, int color)
+    {
+        if (dataSet == null || dataSet.Columns == null)
+        {
+            Debug.LogWarning("[PointCloudRenderer] SetMappingAndColor: No dataset loaded, ignoring");
+            return;
+        }
+        
+        int columnCount = dataSet.Columns.Count;
+        
+        // Validate and clamp all indices
+        xColumnIndex = Mathf.Clamp(x, 0, columnCount - 1);
+        yColumnIndex = Mathf.Clamp(y, 0, columnCount - 1);
+        zColumnIndex = Mathf.Clamp(z, 0, columnCount - 1);
+        colorColumnIndex = Mathf.Clamp(color, 0, columnCount - 1);
+        
+        // Generate once with all new indices
         GeneratePoints();
     }
 

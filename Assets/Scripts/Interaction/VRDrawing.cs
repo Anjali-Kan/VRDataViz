@@ -218,8 +218,17 @@ public void LoadDrawings(List<List<Vector3>> data)
 {
     ClearAllDrawings();
     
+    // Get fresh reference to CoordinateSystem (in case it was moved)
     CoordinateSystem coordSystem = FindFirstObjectByType<CoordinateSystem>();
     Transform parent = coordSystem != null ? coordSystem.transform : null;
+    
+    if (parent == null)
+    {
+        Debug.LogWarning("[VRDrawing] Cannot load drawings - CoordinateSystem not found");
+        return;
+    }
+    
+    Debug.Log($"[VRDrawing] Loading {data.Count} drawings, parent position: {parent.position}, parent rotation: {parent.eulerAngles}");
     
     foreach (List<Vector3> points in data)
     {
@@ -228,10 +237,11 @@ public void LoadDrawings(List<List<Vector3>> data)
         GameObject lineObj = new GameObject("Drawing_" + drawingCount);
         drawingCount++;
         
-        if (parent != null)
-        {
-            lineObj.transform.SetParent(parent);
-        }
+        // Set parent FIRST, then set local transform
+        lineObj.transform.SetParent(parent, false); // false = keep world position, but we want local
+        lineObj.transform.localPosition = Vector3.zero;
+        lineObj.transform.localRotation = Quaternion.identity;
+        lineObj.transform.localScale = Vector3.one;
         
         LineRenderer lr = lineObj.AddComponent<LineRenderer>();
         lr.startWidth = lineWidth;
@@ -239,13 +249,13 @@ public void LoadDrawings(List<List<Vector3>> data)
         lr.material = new Material(Shader.Find("Sprites/Default"));
         lr.startColor = drawColor;
         lr.endColor = drawColor;
-        lr.useWorldSpace = false;
+        lr.useWorldSpace = false; // Use local space relative to parent
         lr.positionCount = points.Count;
         lr.SetPositions(points.ToArray());
         
         allDrawings.Add(lineObj);
     }
     
-    Debug.Log("Loaded " + data.Count + " drawings");
+    Debug.Log($"[VRDrawing] Loaded {data.Count} drawings as children of {parent.name} at position {parent.position}");
 }
 }
