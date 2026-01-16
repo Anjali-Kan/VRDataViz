@@ -6,7 +6,7 @@ A universal CSV data visualization tool for Meta Quest built with Unity and Open
 
 Traditional 2D charts struggle to represent relationships in multi-dimensional data. VR DataViz solves this by mapping data to 3D space where users can physically walk around their data, grab and reposition visualizations, and annotate insights directly in space.
 
-Built as a portfolio project demonstrating XR development, data visualization, and interactive system design.
+Built for fun and as a portfolio project demonstrating XR development, data visualization, and interactive system design. I took quite a few data science courses this semester and I wanted a tool like this to visualize my data in space and analyze it in depth.
 
 
 ## Screenshots
