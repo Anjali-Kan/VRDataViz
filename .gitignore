@@ -90,3 +90,4 @@ Thumbs.db
 # Ignore builds folder
 /Builds/
 "@ | Out-File -FilePath ".gitignore" -Encoding utf8
+*.zip

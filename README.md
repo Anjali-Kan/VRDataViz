@@ -27,10 +27,8 @@ Built as a portfolio project demonstrating XR development, data visualization, a
 
 ### Live Demo on:
 Itch.io : https://sketcherex.itch.io/vr-dataviz
+
 Other projects: https://anjali-kanvinde.vercel.app/
-
-
-<iframe frameborder="0" src="https://itch.io/embed/4200935?linkback=true&amp;bg_color=0B0B0B&amp;fg_color=C3CFA1&amp;link_color=B27EE3&amp;border_color=B27EE3" width="552" height="167"><a href="https://sketcherex.itch.io/vr-dataviz">VR DataViz by Sketcherex</a></iframe>
 
 ## Author
 
